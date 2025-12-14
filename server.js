@@ -20,6 +20,10 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/', (req, res) => {
+  res.send('Welcome to the Gold Price Backend Service. Use /api/gold-price to get the current gold price.');
+});
+
 // Get current gold price
 app.get('/api/gold-price', async (req, res) => {
   try {
@@ -108,12 +112,7 @@ async function startServer() {
 
     // Start Express server
     app.listen(PORT, () => {
-      console.log(`\n🚀 Gold Price Backend Server Started`);
-      console.log(`📡 Server running on port ${PORT}`);
-      console.log(`🌐 Health check: http://localhost:${PORT}/health`);
-      console.log(`💰 Gold price API: http://localhost:${PORT}/api/gold-price`);
-      console.log(`📊 Status endpoint: http://localhost:${PORT}/api/status`);
-      console.log(`⏱️  Auto-update: Every 5 minutes`);
+
       console.log(`\nPress Ctrl+C to stop the server\n`);
     });
   } catch (error) {
