@@ -5,7 +5,7 @@ const cron = require('node-cron');
 const goldPriceService = require('./goldPriceService');
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = 80;
 
 // Middleware
 app.use(cors());
