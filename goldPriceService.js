@@ -15,6 +15,7 @@ class GoldPriceService {
    */
   async fetchGoldPrice() {
     try {
+      console.log('Fetching gold price from Yahoo Finance API...');
       const response = await axios.get('https://query1.finance.yahoo.com/v8/finance/chart/GC=F', {
         timeout: TIMEOUT,
         headers: {
@@ -22,14 +23,21 @@ class GoldPriceService {
         }
       });
 
+      console.log('Yahoo Finance API response received');
       const data = response.data;
 
       if (data.chart && data.chart.result && data.chart.result.length > 0) {
         const result = data.chart.result[0];
         const meta = result.meta;
+        console.log('Meta data:', {
+          regularMarketPrice: meta.regularMarketPrice,
+          previousClose: meta.previousClose,
+          currency: meta.currency
+        });
 
         // Get the most accurate price - prefer quote data over meta
         let goldPrice = meta.regularMarketPrice;
+        console.log('Initial gold price from meta:', goldPrice);
 
         // Check indicators for more recent price data
         if (result.indicators && result.indicators.quote && result.indicators.quote[0]) {
@@ -40,6 +48,7 @@ class GoldPriceService {
             for (let i = closes.length - 1; i >= 0; i--) {
               if (closes[i] !== null) {
                 goldPrice = closes[i];
+                console.log('Found close price from indicators:', goldPrice);
                 break;
               }
             }
@@ -49,25 +58,32 @@ class GoldPriceService {
         // Fallback: if price seems invalid (too low), use regularMarketPrice
         if (!goldPrice || goldPrice < 1000) {
           goldPrice = meta.regularMarketPrice || meta.previousClose;
+          console.log('Using fallback price:', goldPrice);
         }
 
         const goldPriceData = {
           goldPricePerOunceUSD: goldPrice,
           timestamp: new Date().toISOString(),
-          marketState: meta.marketState,
           previousClose: meta.previousClose,
           currency: meta.currency
         };
+
+        console.log('Prepared gold price data:', goldPriceData);
 
         return {
           success: true,
           data: goldPriceData
         };
       } else {
+        console.error('Invalid Yahoo Finance response structure:', JSON.stringify(data, null, 2));
         throw new Error('Invalid response structure from Yahoo Finance');
       }
     } catch (error) {
       console.error('Error fetching gold price:', error.message);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
       return {
         success: false,
         error: error.message,
@@ -108,16 +124,20 @@ class GoldPriceService {
     }
 
     this.isUpdating = true;
-    console.log('Updating gold price data...');
+    console.log('\n=== Starting cache update ===');
+    console.log('Current cached data:', this.cachedData);
 
     const result = await this.fetchGoldPrice();
 
     if (result.success) {
       this.cachedData = result.data;
       this.lastUpdated = new Date();
-      console.log('Gold price updated successfully:', this.cachedData.goldPricePerOunceUSD);
+      console.log('✓ Gold price updated successfully:', this.cachedData.goldPricePerOunceUSD);
+      console.log('✓ Cached data is now available');
+      console.log('=== Cache update complete ===\n');
     } else {
-      console.error('Failed to update gold price:', result.error);
+      console.error('✗ Failed to update gold price:', result.error);
+      console.log('=== Cache update failed ===\n');
     }
 
     this.isUpdating = false;
@@ -128,8 +148,11 @@ class GoldPriceService {
    * Initialize the service with first data fetch
    */
   async initialize() {
-    console.log('Initializing Gold Price Service...');
+    console.log('\n╔═══════════════════════════════════════╗');
+    console.log('║   Initializing Gold Price Service     ║');
+    console.log('╚═══════════════════════════════════════╝\n');
     await this.updateCache();
+    console.log('✓ Service initialization complete\n');
   }
 
   /**

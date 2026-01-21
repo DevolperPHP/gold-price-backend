@@ -5,11 +5,23 @@ const cron = require('node-cron');
 const goldPriceService = require('./goldPriceService');
 
 const app = express();
-const PORT = 80;
+const PORT = 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+}));
 app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`\n📨 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  console.log(`   User-Agent: ${req.headers['user-agent'] || 'N/A'}`);
+  console.log(`   Origin: ${req.headers.origin || 'N/A'}`);
+  next();
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -27,9 +39,11 @@ app.get('/', (req, res) => {
 // Get current gold price
 app.get('/api/gold-price', async (req, res) => {
   try {
+    console.log('Received request for gold price at', new Date().toISOString());
     const cachedData = goldPriceService.getCachedData();
 
     if (!cachedData) {
+      console.log('No cached data available, service may be initializing');
       return res.status(503).json({
         success: false,
         error: 'Gold price data not available',
@@ -38,6 +52,7 @@ app.get('/api/gold-price', async (req, res) => {
     }
 
     const timeSinceLastUpdate = goldPriceService.getTimeSinceLastUpdate();
+    console.log('Returning cached gold price:', cachedData.goldPricePerOunceUSD);
 
     res.json({
       success: true,
@@ -51,10 +66,12 @@ app.get('/api/gold-price', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in /api/gold-price:', error);
+    console.error('Stack trace:', error.stack);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
-      message: error.message
+      message: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 });
